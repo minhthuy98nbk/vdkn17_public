@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        #tab td {
+            background-color: #4CAF50;
+        }
+
+        #tab td:hover {
+            background-color: #f2f2f2;
+        }
+
+        #search_table, #addTab, #add_table, #logout, #myDIV {
+            display: none;
+        }
+
+        h1, h2{
+            font-family: Arial
+        }
+
+        table {
+        	margin-top: 20px;
+            font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        table td, table th {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        table tr:hover {
+            background-color: #ddd;
+        }
+
+        table th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #errorlogin {
+             color: red;
+        }
+
+        #logout_form, #login_form {
+            float: right;
+            margin: 20px;
+        }
+       
+    </style>
+</head>
+
+<body>
+
+    <!-- TITLE -->
+    <h1>KHÓA THÔNG MINH - ỨNG DỤNG ĐIỂM DANH VÀ CHẤM CÔNG</h1>
+    <h2>Đồ án Vi điều khiển - Nhóm 17</h2>
+    
+    <!-- TAB -->
+    <table id="tab">
+        <thead>
+            <tr>
+	            <td onclick="showAllHistory(1)">All history</td>
+	            <td onclick="showAllEmployee(1)">All employee</td>
+	            <td id="addTab" onclick="showAddForm()">Add employee</td>
+            </tr>
+        </thead>
+    </table>
+
+    <!-- LOGIN FORM -->
+    <div id="login_form">
+        <span>User: </span><input type="text" id="user"/> 
+        <span>Pass: </span><input type="password" id="pass"/> 
+        <input type="submit" id="login" value="LOGIN" onclick="Login()"/>
+        </br> <span id = "errorlogin"> </span>
+    </div>
+
+    <!-- LOGOUT FORM -->
+    <div id="logout_form">
+    	<input type="submit" id="logout" value="LOGOUT" onclick="Logout()"/>
+    </div>
+    
+    <!-- SEARCH TABLE -->
+    <table id="search_table">
+        <thead><tr><th>Search</th> </tr></thead>
+        <tbody>
+        <tr> 
+            <td> Id: </td> 
+            <td> <input type="text" id="findId"/> </td>
+            <td> Name: </td> 
+            <td> <input type="text" id="findName"/> </td>
+            <td> Department: 
+            </td> <td> <input type="text" id="findClass" /> </td>
+        </tr>  
+        <tr> 
+            <td> Status: </td>
+            <td> <input type="text" id="findStatus"/> </td>
+            <td> Date/Month:</td>
+            <td> <input type="text" id="findDate"/> </td>
+            <td> Type Activities: </td>
+            <td> <input type="text" id="findActivities"/> </td>
+        </tr>  
+        <tr> 
+            <td> </td>
+            <td> <input type="submit" value="Find History" onclick="showHistory(0)"/> </td>
+            <td> </td> 
+            <td> <input type="submit" value="Find Employee" onclick="showEmployee(0)"/></td>
+            <td> </td>
+            <td> <input type="reset" value="Reset" onclick="resetAll_searchTable()"/> </td> 
+        </tr> 
+        </tbody>
+    </table>
+
+    <!-- NOTE -->
+	</br> <b> * NOTE </b>
+	</br> -		Format of Date/Month text field: dd/mm/yyyy or mm/yyyy
+	</br> -		Field "Status" is only used to find Employee
+	</br> -		Field "Type Activities" is only used to find History
+
+    <!-- ADD TABLE -->
+    <table id="add_table">
+        <thead><tr><th>Add</th> </tr></thead>
+        <tbody>
+	        <tr>   
+	        </tr>
+	        <tr> 
+	            <td> ID: </td>
+	            <td> <input type="text" id="addId"/> </td>
+	            <td> Name: </td>
+	            <td> <input type="text" id="addName"/> </td>
+	            <td> Department: </td>
+	            <td> <input type="text" id="addClass"/> </td>
+	            <td> <input type="submit" value="Save" onclick="addData()"/> </td>  
+	            <td> <input type="reset" value="Reset" onclick="resetAll_addTable()"/> </td> 
+	            <td> <inform id = "inform"></inform></td> 
+	        </tr>
+    	</tbody>
+    </table>
+
+    <!-- TABLE CONTENT -->
+    <table width='100%'  id="main_table">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+
+    <!---------------------------------------------------->
+    <!-- import firebase js library -->
+    <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.11.1/firebase-messaging.js"></script>
+    <!---------------------------------------------------->
+    <!-- our js app code -->
+    <script>
+
+        var config = {
+            apiKey: "AIzaSyDeHy73vDX957nCHNFQwPm2HnjpgIObA_c",
+            authDomain: "hanghang-2dc20.firebaseapp.com",
+            databaseURL: "https://hanghang-2dc20.firebaseio.com",
+            projectId: "hanghang-2dc20",
+            storageBucket: "hanghang-2dc20.appspot.com",
+            messagingSenderId: "120693200632"
+          };
+        firebase.initializeApp(config)
+        var database = firebase.database()
+        var refVDK = database.ref('VDK')
+        var refAccount =  database.ref('ACCOUNT')
+        document.getElementById('search_table').style.display = 'block';
+        
+           
+
+        // ------------------------- FUNCTION --------------------------------
+
+        function Logout(){
+        	document.getElementById('logout_form').style.display = 'none';
+            document.getElementById('addTab').style.display = 'none';
+            document.getElementById('add_table').style.display = 'none';
+            document.getElementById('login_form').style.display = 'block';
+            document.getElementById('search_table').style.display = 'block';
+            var table = document.getElementById('main_table')
+            table.getElementsByTagName('thead')[0].innerHTML = ""
+            table.getElementsByTagName('tbody')[0] .innerHTML = ""
+            document.getElementById('errorlogin').innerHTML = "";
+            
+        } 
+
+        function Login(){
+            refAccount.once('value', function (item_list) {
+                ok = 0;
+                document.getElementById('errorlogin').innerHTML = "";
+                var USER = document.getElementById('user').value;
+                var PASS = document.getElementById('pass').value;
+                document.getElementById('pass').value = '';
+                document.getElementById('user').value = '';
+                item_list.forEach(function (item) {
+                    if(item.val().user == USER && item.val().pass == PASS)
+                    {
+                        document.getElementById('addTab').style.display = 'block';
+                        document.getElementById('logout').style.display = 'block';
+                        document.getElementById('login_form').style.display = 'none';
+                        ok = 1;
+                        return;
+                    }    
+                });
+                if(ok === 0) document.getElementById('errorlogin').innerHTML = "Login Fail!";
+            });
+        }
+
+        function showAddForm(){
+            document.getElementById('search_table').style.display  = 'none';
+            document.getElementById('add_table').style.display  = 'block';
+            document.getElementById('inform').innerHTML = "";
+            showListAdd();
+        }
+
+        function showListAdd(){
+            refVDK.once('value', function (item_list) {
+
+                var table = document.getElementById('main_table')
+                var table_head = table.getElementsByTagName('thead')[0]
+                table_head.innerHTML = 
+                "<tr><th>ID</th><th>Name</th><th>Department</th><th>Status</th></tr>"
+
+                var table_body = table.getElementsByTagName('tbody')[0]
+                table_body.innerHTML = ""
+
+                item_list.forEach(function (item) {
+                    if (item.val().infor.fullName === "X"){
+                        html_str =
+                            '<tr>'
+                            + '<td>' + item.key + '</td>'
+                            + '<td>' + item.val().infor.fullName + '</td>'
+                            + '<td>' + item.val().infor.class + '</td>'
+                            + '<td>' + item.val().infor.status + '</td>'
+                            + '</tr>'
+                        table_body.innerHTML += html_str
+                    }
+ 
+                });
+                if (table_body.innerHTML==="") 
+                    table_body.innerHTML = "There is no id to add. Reset to load the new one!";
+            });
+        }
+
+        function addData(){
+            var userId = document.getElementById('addId').value;
+            var keyNameAdd = document.getElementById('addName').value;
+            var keyClassAdd = document.getElementById('addClass').value;
+            if (userId === "" || keyNameAdd === "" || keyClassAdd === "") {
+                document.getElementById('inform').innerHTML = "Enter full blank fields!";
+            } else {
+                checkId(userId,keyNameAdd,keyClassAdd);
+            }
+        }
+
+        function checkId(userId,keyNameAdd,keyClassAdd) {
+            res = false
+            refVDK.once('value', function (item_list) {
+                item_list.forEach(function (item) {
+                    if (item.val().infor.fullName === "X" && item.key === userId) {
+                        res = true
+                        return;
+                    }  
+                });
+                if (res === true){
+                    firebase.database().ref('VDK/' + userId + '/infor').set({
+                        fullName: keyNameAdd,
+                        class: keyClassAdd
+                    });
+                    document.getElementById('inform').innerHTML = "Add employee success!";
+                    showListAdd();
+                } else {
+                    document.getElementById('inform').innerHTML = "Wrong ID!";
+                }
+            });
+        }
+
+        function showAllHistory(){
+            document.getElementById('search_table').style.display  = 'block';
+            document.getElementById('add_table').style.display  = 'none';
+            resetAll_searchTable();
+            showHistory(1);
+        }
+
+        function showAllEmployee(){
+            document.getElementById('search_table').style.display  = 'block';
+            document.getElementById('add_table').style.display  = 'none';
+            resetAll_searchTable();
+            showEmployee(1);
+        }
+
+        function resetAll_searchTable(){
+        	document.getElementById('findId').value = '';
+            document.getElementById('findName').value = '';
+            document.getElementById('findClass').value = '';
+            document.getElementById('findDate').value = '';
+            document.getElementById('findActivities').value = '';
+        }
+
+        function resetAll_addTable(){
+            document.getElementById('addName').value = '';
+            document.getElementById('addClass').value = '';
+            document.getElementById('addId').value = '';
+            showListAdd();
+        }
+
+        function compareMonth(a, m){
+        	if (m == "") {
+        		return 1;
+        	}
+            if (m.length==10) {
+            	if (a==m) return 1;
+            	else return 0;
+            } else {
+            	if (a.substring(3,10)==m) return 1; 
+            	else return 0;
+            }
+        }
+
+        function showEmployee(showAll) {
+            
+            refVDK.once('value', function (item_list) {
+
+                var keyId = document.getElementById('findId').value;
+                var keyName = document.getElementById('findName').value;
+                var keyClass = document.getElementById('findClass').value;
+                var keyStatus = document.getElementById('findStatus').value;
+                var keyDate = document.getElementById('findDate').value;
+                var table = document.getElementById('main_table')
+                var table_head = table.getElementsByTagName('thead')[0]
+                
+                if (keyDate == "") dv = "ALL"
+                else if (keyDate.length == 10) dv = "DATE : ";
+                else dv = "MONTH : ";
+      
+                table_head.innerHTML = 
+                "<tr><th>ID</th> <th>Name</th><th>Department</th><th>" + dv + keyDate + "</th><th>Status</th></tr>"
+
+                var table_body = table.getElementsByTagName('tbody')[0]
+                table_body.innerHTML = ""
+                html_str =  '<tr> NO RESULT </tr>';
+
+                item_list.forEach(function (item) {
+
+                    var cnt = 0
+                    var vis = {}
+                    item.val().history.forEach(function (a) {
+                         vis[a.date]=0
+                    });  
+                    item.val().history.forEach(function (a) {
+                        if (vis[a.date]===0 && compareMonth(a.date,keyDate)===1)
+                        {
+                            vis[a.date]=1;
+                            cnt++;
+                        }
+                    }); 
+
+
+                    if ((showAll === 1) ||
+	                    	(
+	                    		(keyId!="" || keyName!="" || keyStatus!="" || keyDate!="" || keyClass!="") &&
+		                    	(item.val().infor.fullName === keyName || keyName === "") &&
+		                    	(item.val().infor.status === keyStatus || keyStatus === "") &&
+		                    	(item.key === keyId || keyId === "") && 
+		                        (item.val().infor.class === keyClass || keyClass === "") 
+	                        ) 
+                        )
+                    {
+                        html_str =
+                            '<tr>'
+                            + '<td>' + item.key + '</td>'
+                            + '<td>' + item.val().infor.fullName + '</td>'
+                            + '<td>' + item.val().infor.class + '</td>'
+                            + '<td>' + cnt + '</td>'
+                            + '<td>' + item.val().infor.status + '</td>'
+                            + '</tr>'
+                        table_body.innerHTML += html_str
+                        html_str = ""
+                    }
+                });
+                table_body.innerHTML += html_str
+            	
+            });
+        }
+
+        function showHistory(showAll) {
+            var allHistory = {}
+            refVDK.once('value', function (item_list) {
+
+                var keyId = document.getElementById('findId').value;
+                var keyName = document.getElementById('findName').value;
+                var keyClass = document.getElementById('findClass').value;
+                var keyDate = document.getElementById('findDate').value;
+                var keyType = document.getElementById('findActivities').value;
+
+                var table = document.getElementById('main_table')
+                var table_head = table.getElementsByTagName('thead')[0]
+                table_head.innerHTML = 
+                "<tr><th>STT</th><th>ID</th><th>Name</th><th>Department</th><th>Date</th><th>Time</th><th>Type</th></tr>"
+
+                var table_body = table.getElementsByTagName('tbody')[0]
+                table_body.innerHTML = ""
+
+                // create array allHistory
+                allHistory = {}
+                var sttHistory = 0
+                item_list.forEach(function (item) {
+
+                    item.val().history.forEach(function (a) {
+                        allHistory[sttHistory] = {
+                            id: item.key,
+                            fullName: item.val().infor.fullName,
+                            class: item.val().infor.class,
+                            date: a.date,
+                            time: a.time,
+                            typeAc: a.type
+                        }
+                        sttHistory++;
+                    });              
+                }); 
+
+                // sort 
+                allHistory = sortHistory(allHistory,sttHistory); 
+
+                // show history with keyword condition
+                var stt = 0;
+               	html_str =  '<tr> NO RESULT </tr>';
+                for(var i=0; i<sttHistory; i++)
+                { 
+                    if ( (showAll === 1) ||
+                    	 ((keyId!="" || keyName!="" || keyType!="" || keyDate!="" || keyClass!="") &&
+                    	 (allHistory[i].id === keyId || keyId === "") &&
+                         (allHistory[i].fullName === keyName || keyName === "") &&
+                         (allHistory[i].typeAc === keyType || keyType === "") &&
+                         (allHistory[i].class === keyClass || keyClass === "") &&
+                         compareMonth(allHistory[i].date,keyDate)===1 ) )
+                    {
+                        stt++;
+                        html_str =
+                            '<tr>'
+                            + '<td>' + stt + '</td>'
+                            + '<td>' + allHistory[i].id + '</td>'
+                            + '<td>' + allHistory[i].fullName + '</td>'
+                            + '<td>' + allHistory[i].class + '</td>'
+                            + '<td>' + allHistory[i].date + '</td>'
+                            + '<td>' + allHistory[i].time + '</td>'
+                            + '<td>' + allHistory[i].typeAc + '</td>'
+                            + '</tr>';
+                        table_body.innerHTML += html_str;
+                        html_str = ""
+                    }  
+                } 
+                table_body.innerHTML += html_str;          
+            });
+        }
+        
+        function sortHistory(allHistory, sttHistory){
+            for(var i=0; i<sttHistory; i++){
+                for(var j=i+1; j<sttHistory; j++){
+                    if (compareDate(allHistory[i].date,allHistory[j].date)===1 ||
+                                    (allHistory[i].date === allHistory[j].date && 
+                                    compareTime(allHistory[i].time,allHistory[j].time)) ) {
+
+                        //swap
+                        var temp = allHistory[i].id;
+                        allHistory[i].id = allHistory[j].id;
+                        allHistory[j].id = temp;
+
+                        temp = allHistory[i].fullName;
+                        allHistory[i].fullName = allHistory[j].fullName;
+                        allHistory[j].fullName = temp;
+
+                        temp = allHistory[i].class;
+                        allHistory[i].class = allHistory[j].class;
+                        allHistory[j].class = temp;
+
+                        temp = allHistory[i].date;
+                        allHistory[i].date = allHistory[j].date;
+                        allHistory[j].date = temp;
+
+                        temp = allHistory[i].time;
+                        allHistory[i].time = allHistory[j].time;
+                        allHistory[j].time = temp;  
+
+                        temp = allHistory[i].typeAc;
+                        allHistory[i].typeAc = allHistory[j].typeAc;
+                        allHistory[j].typeAc = temp;  
+                    }
+                }
+            }
+            return allHistory;
+        }
+
+        function compareDate(a, b){
+            // year
+            var y1 = (a[6]-'0')*1000+(a[7]-'0')*100+(a[8]-'0')*10+(a[9]-'0');
+            var y2 = (b[6]-'0')*1000+(b[7]-'0')*100+(b[8]-'0')*10+(b[9]-'0');
+            if (y1>y2) return 1;
+            
+            // month
+            var m1 = (a[3]-'0')*10+(a[4]-'0');
+            var m2 = (b[3]-'0')*10+(b[4]-'0');
+            if (y1===y2 && m1>m2) return 1;
+           
+            // day
+            var d1 = (a[0]-'0')*10+(a[1]-'0');
+            var d2 = (b[0]-'0')*10+(b[1]-'0');
+            if (y1===y2 && m1===m2 && d1>d2) return 1;
+
+            return 0;
+        }
+        function compareTime(a, b){
+            // hour
+            var h1 = (a[0]-'0')*10+(a[1]-'0');
+            var h2 = (b[0]-'0')*10+(b[1]-'0');
+            if (h1>h2) return 1;
+            
+            // minute
+            var m1 = (a[3]-'0')*10+(a[4]-'0');
+            var m2 = (b[3]-'0')*10+(b[4]-'0');
+            if (h1===h2 && m1>m2) return 1;
+
+            // second
+            var s1 = (a[6]-'0')*10+(a[7]-'0');
+            var s2 = (b[6]-'0')*10+(b[7]-'0');
+            if (h1===h2  && m1===m2 && s1>s2) return 1;
+
+            return 0;
+        }
+    </script>
+</body>
+
+</html>
