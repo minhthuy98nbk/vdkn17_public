@@ -29,7 +29,7 @@ void setup() {
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH); 
   
   // set id max
-  x = "VDK/idMax";
+  x = "idMax";
   idMax = Firebase.getFloat(x);
   if (idMax == 0) Firebase.setFloat(x,0);
   else Serial.println (idMax);
@@ -97,7 +97,7 @@ void loop() {
               setHistory(id,"Add fingerprint",1);
               x = "VDK/" + (String)(id) + "/count_history";
               Firebase.setFloat(x,1);
-              Firebase.setFloat("VDK/idMax",id);
+              Firebase.setFloat("idMax",id);
           
           } else if (type == 2){ // delete one
               x = "VDK/" + (String)(id) + "/count_history";
