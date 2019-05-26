@@ -55,7 +55,7 @@ void loop() {
 
   if (type==5){
       delay(30);
-      idMax = Firebase.getFloat("VDK/idMax");
+      idMax = Firebase.getFloat("idMax");
       sendNumSerial(idMax);
   } else {
       DATE = gettDate();
@@ -70,7 +70,7 @@ void loop() {
           setHistory(0,"Try to open door",count);
           
       } else if (type==4) { // delete all
-          idMax = Firebase.getFloat("VDK/idMax");
+          idMax = Firebase.getFloat("idMax");
           Serial.print("idMax :");
           Serial.println(idMax);
           for (int i=1; i<=idMax; i++)
