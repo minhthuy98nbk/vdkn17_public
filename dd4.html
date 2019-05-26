@@ -11,7 +11,7 @@
             background-color: #f2f2f2;
         }
 
-        #search_table, #addTab, #add_table, #logout, #myDIV {
+        #search_table, #search_form, #addTab, #add_table, #add_form, #allemployee_table, #allhistory_table, #logout, #myDIV {
             display: none;
         }
 
@@ -69,8 +69,8 @@
     <table id="tab">
         <thead>
             <tr>
-	            <td onclick="showAllHistory(1)">All history</td>
-	            <td onclick="showAllEmployee(1)">All employee</td>
+	            <td onclick="showAllHistory()">All history</td>
+	            <td onclick="showAllEmployee()">All employee</td>
 	            <td id="addTab" onclick="showAddForm()">Add employee</td>
             </tr>
         </thead>
@@ -90,7 +90,7 @@
     </div>
     
     <!-- SEARCH TABLE -->
-    <table id="search_table">
+    <table id="search_form">
         <thead><tr><th>Search</th> </tr></thead>
         <tbody>
         <tr> 
@@ -111,9 +111,9 @@
         </tr>  
         <tr> 
             <td> </td>
-            <td> <input type="submit" value="Find History" onclick="showHistory(0)"/> </td>
+            <td> <input type="submit" value="Find History" onclick="searchHistory()"/> </td>
             <td> </td> 
-            <td> <input type="submit" value="Find Employee" onclick="showEmployee(0)"/></td>
+            <td> <input type="submit" value="Find Employee" onclick="searchEmployee()"/></td>
             <td> </td>
             <td> <input type="reset" value="Reset" onclick="resetAll_searchTable()"/> </td> 
         </tr> 
@@ -127,7 +127,7 @@
 	</br> -		Field "Type Activities" is only used to find History
 
     <!-- ADD TABLE -->
-    <table id="add_table">
+    <table id="add_form">
         <thead><tr><th>Add</th> </tr></thead>
         <tbody>
 	        <tr>   
@@ -146,8 +146,26 @@
     	</tbody>
     </table>
 
-    <!-- TABLE CONTENT -->
-    <table width='100%'  id="main_table">
+    <!-- TABLE SEARCH -->
+    <table width='100%'  id="search_table">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- TABLE ADD -->
+    <table width='100%'  id="add_table">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- TABLE ALL HISTORY -->
+    <table width='100%'  id="allhistory_table">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- TABLE ALL EMPLOYEE -->
+    <table width='100%'  id="allemployee_table">
         <thead></thead>
         <tbody></tbody>
     </table>
@@ -176,25 +194,196 @@
         var database = firebase.database()
         var refVDK = database.ref('VDK')
         var refAccount =  database.ref('ACCOUNT')
-        document.getElementById('search_table').style.display = 'block';
-        
+
+        document.getElementById('search_form').style.display = 'block';
+        listEmployee();
+        listHistory();
+        listAdd();
+
            
 
         // ------------------------- FUNCTION --------------------------------
 
+        // Ham lien tuc cap nhat history
+        function listHistory() {
+            var allHistory = {}
+            refVDK.on('value', function (item_list) {
+
+                var table = document.getElementById('allhistory_table')
+                var table_head = table.getElementsByTagName('thead')[0]
+                table_head.innerHTML = 
+                "<tr><th>ID</th><th>Name</th><th>Department</th><th>Date</th><th>Time</th><th>Type</th></tr>"
+
+                var table_body = table.getElementsByTagName('tbody')[0]
+                table_body.innerHTML = ""
+
+                // create array allHistory
+                allHistory = {}
+                var sttHistory = 0
+                item_list.forEach(function (item) {
+
+                    item.val().history.forEach(function (a) {
+                        allHistory[sttHistory] = {
+                            id: item.key,
+                            fullName: item.val().infor.fullName,
+                            class: item.val().infor.class,
+                            date: a.date,
+                            time: a.time,
+                            typeAc: a.type
+                        }
+                        sttHistory++;
+                    });              
+                }); 
+
+                // sort 
+                allHistory = sortHistory(allHistory,sttHistory); 
+
+               	html_str =  '<tr> NO RESULT </tr>';
+                for(var i=sttHistory-1; i>=0; i--)
+                { 
+                        html_str =
+                            '<tr>'
+                            + '<td>' + allHistory[i].id + '</td>'
+                            + '<td>' + allHistory[i].fullName + '</td>'
+                            + '<td>' + allHistory[i].class + '</td>'
+                            + '<td>' + allHistory[i].date + '</td>'
+                            + '<td>' + allHistory[i].time + '</td>'
+                            + '<td>' + allHistory[i].typeAc + '</td>'
+                            + '</tr>';
+                        table_body.innerHTML += html_str;
+                        html_str = ""
+                     
+                } 
+                table_body.innerHTML += html_str;          
+            });
+        }
+
+        // ham lien tuc cap nhat danh sach nhan vien
+		function listEmployee() {
+            var table = document.getElementById('allemployee_table')
+            var table_head = table.getElementsByTagName('thead')[0]
+            refVDK.on('value', function (item_list) {
+                table_head.innerHTML = 
+                "<tr><th>ID</th><th>Name</th><th>Department</th><th>ALL</th><th>Status</th></tr>"
+
+                var table_body = table.getElementsByTagName('tbody')[0]
+                table_body.innerHTML = ""
+                html_str =  '<tr> NO RESULT </tr>';
+
+                item_list.forEach(function (item) {
+
+                    var cnt = 0
+                    var vis = {}
+                    item.val().history.forEach(function (a) {
+                         vis[a.date]=0
+                    });  
+                    item.val().history.forEach(function (a) {
+                        if (vis[a.date]===0 && compareMonth(a.date,"")===1)
+                        {
+                            vis[a.date]=1;
+                            cnt++;
+                        }
+                    }); 
+
+
+                    html_str =
+                        '<tr>'
+                        + '<td>' + item.key + '</td>'
+                        + '<td>' + item.val().infor.fullName + '</td>'
+                        + '<td>' + item.val().infor.class + '</td>'
+                        + '<td>' + cnt + '</td>'
+                        + '<td>' + item.val().infor.status + '</td>'
+                        + '</tr>'
+                    table_body.innerHTML += html_str
+                    html_str = ""
+                    
+                });
+                table_body.innerHTML += html_str
+            	
+            });
+        }
+
+        // ham lien tuc cap nhat danh sach them vao
+        function listAdd(){
+            refVDK.on('value', function (item_list) {
+
+                var table = document.getElementById('add_table')
+                var table_head = table.getElementsByTagName('thead')[0]
+                table_head.innerHTML = 
+                "<tr><th>ID</th><th>Name</th><th>Department</th><th>Status</th></tr>"
+
+                var table_body = table.getElementsByTagName('tbody')[0]
+                table_body.innerHTML = ""
+
+                item_list.forEach(function (item) {
+                    if (item.val().infor.fullName === "X"){
+                        html_str =
+                            '<tr>'
+                            + '<td>' + item.key + '</td>'
+                            + '<td>' + item.val().infor.fullName + '</td>'
+                            + '<td>' + item.val().infor.class + '</td>'
+                            + '<td>' + item.val().infor.status + '</td>'
+                            + '</tr>'
+                        table_body.innerHTML += html_str
+                    }
+ 
+                });
+                if (table_body.innerHTML==="") 
+                    table_body.innerHTML = "There is no id to add";
+            });
+        }
+
+        // ham khi bam vao tab All History
+        function showAllHistory(){
+        	document.getElementById('add_table').style.display  = 'none';
+        	document.getElementById('add_form').style.display  = 'none';
+        	document.getElementById('allemployee_table').style.display  = 'none';
+        	document.getElementById('search_table').style.display  = 'none';
+            document.getElementById('search_form').style.display  = 'block';
+            document.getElementById('allhistory_table').style.display  = 'block';
+            resetAll_searchTable();
+            
+        }
+
+        // ham khi bam vao tab All Employee
+        function showAllEmployee(){
+        	document.getElementById('add_table').style.display  = 'none';
+        	document.getElementById('add_form').style.display  = 'none';
+        	document.getElementById('allhistory_table').style.display  = 'none';
+        	document.getElementById('search_table').style.display  = 'none';
+            document.getElementById('search_form').style.display  = 'block';
+            document.getElementById('allemployee_table').style.display  = 'block';
+            resetAll_searchTable();
+        }
+
+        // ham khi bam vao tab Add Employee
+        function showAddForm(){
+        	document.getElementById('allhistory_table').style.display  = 'none';
+        	document.getElementById('allemployee_table').style.display  = 'none';
+            document.getElementById('search_form').style.display  = 'none';
+            document.getElementById('search_table').style.display  = 'none';
+            document.getElementById('add_table').style.display  = 'block';
+            document.getElementById('add_form').style.display = 'block';
+            document.getElementById('inform').innerHTML = "";
+            showListAdd();
+        }
+
+        // Ham khi bam logout
         function Logout(){
         	document.getElementById('logout_form').style.display = 'none';
             document.getElementById('addTab').style.display = 'none';
+            document.getElementById('add_form').style.display = 'none';
             document.getElementById('add_table').style.display = 'none';
+            document.getElementById('search_table').style.display = 'none';
+            document.getElementById('allhistory_table').style.display = 'none'; 
+            document.getElementById('allemployee_table').style.display = 'none'; 
             document.getElementById('login_form').style.display = 'block';
-            document.getElementById('search_table').style.display = 'block';
-            var table = document.getElementById('main_table')
-            table.getElementsByTagName('thead')[0].innerHTML = ""
-            table.getElementsByTagName('tbody')[0] .innerHTML = ""
-            document.getElementById('errorlogin').innerHTML = "";
-            
-        } 
+            document.getElementById('search_form').style.display = 'block'; 
 
+            resetAll_searchTable();          
+        } 
+        	
+       	// ham khi bam login
         function Login(){
             refAccount.once('value', function (item_list) {
                 ok = 0;
@@ -217,42 +406,7 @@
             });
         }
 
-        function showAddForm(){
-            document.getElementById('search_table').style.display  = 'none';
-            document.getElementById('add_table').style.display  = 'block';
-            document.getElementById('inform').innerHTML = "";
-            showListAdd();
-        }
-
-        function showListAdd(){
-            refVDK.once('value', function (item_list) {
-
-                var table = document.getElementById('main_table')
-                var table_head = table.getElementsByTagName('thead')[0]
-                table_head.innerHTML = 
-                "<tr><th>ID</th><th>Name</th><th>Department</th><th>Status</th></tr>"
-
-                var table_body = table.getElementsByTagName('tbody')[0]
-                table_body.innerHTML = ""
-
-                item_list.forEach(function (item) {
-                    if (item.val().infor.fullName === "X"){
-                        html_str =
-                            '<tr>'
-                            + '<td>' + item.key + '</td>'
-                            + '<td>' + item.val().infor.fullName + '</td>'
-                            + '<td>' + item.val().infor.class + '</td>'
-                            + '<td>' + item.val().infor.status + '</td>'
-                            + '</tr>'
-                        table_body.innerHTML += html_str
-                    }
- 
-                });
-                if (table_body.innerHTML==="") 
-                    table_body.innerHTML = "There is no id to add. Reset to load the new one!";
-            });
-        }
-
+        // Ham them nhan vien
         function addData(){
             var userId = document.getElementById('addId').value;
             var keyNameAdd = document.getElementById('addName').value;
@@ -264,6 +418,7 @@
             }
         }
 
+        // Ham kiem tra tren Firebase co them nhan vien hay khong
         function checkId(userId,keyNameAdd,keyClassAdd) {
             res = false
             refVDK.once('value', function (item_list) {
@@ -286,50 +441,12 @@
             });
         }
 
-        function showAllHistory(){
-            document.getElementById('search_table').style.display  = 'block';
-            document.getElementById('add_table').style.display  = 'none';
-            resetAll_searchTable();
-            showHistory(1);
-        }
-
-        function showAllEmployee(){
-            document.getElementById('search_table').style.display  = 'block';
-            document.getElementById('add_table').style.display  = 'none';
-            resetAll_searchTable();
-            showEmployee(1);
-        }
-
-        function resetAll_searchTable(){
-        	document.getElementById('findId').value = '';
-            document.getElementById('findName').value = '';
-            document.getElementById('findClass').value = '';
-            document.getElementById('findDate').value = '';
-            document.getElementById('findActivities').value = '';
-        }
-
-        function resetAll_addTable(){
-            document.getElementById('addName').value = '';
-            document.getElementById('addClass').value = '';
-            document.getElementById('addId').value = '';
-            showListAdd();
-        }
-
-        function compareMonth(a, m){
-        	if (m == "") {
-        		return 1;
-        	}
-            if (m.length==10) {
-            	if (a==m) return 1;
-            	else return 0;
-            } else {
-            	if (a.substring(3,10)==m) return 1; 
-            	else return 0;
-            }
-        }
-
-        function showEmployee(showAll) {
-            
+        // ham tim kiem nhan vien
+        function searchEmployee() {
+            document.getElementById('allemployee_table').style.display  = 'none';
+        	document.getElementById('allhistory_table').style.display  = 'none';
+        	document.getElementById('add_table').style.display  = 'none';
+        	document.getElementById('search_table').style.display  = 'block';
             refVDK.once('value', function (item_list) {
 
                 var keyId = document.getElementById('findId').value;
@@ -337,7 +454,7 @@
                 var keyClass = document.getElementById('findClass').value;
                 var keyStatus = document.getElementById('findStatus').value;
                 var keyDate = document.getElementById('findDate').value;
-                var table = document.getElementById('main_table')
+                var table = document.getElementById('search_table')
                 var table_head = table.getElementsByTagName('thead')[0]
                 
                 if (keyDate == "") dv = "ALL"
@@ -367,14 +484,12 @@
                     }); 
 
 
-                    if ((showAll === 1) ||
-	                    	(
-	                    		(keyId!="" || keyName!="" || keyStatus!="" || keyDate!="" || keyClass!="") &&
-		                    	(item.val().infor.fullName === keyName || keyName === "") &&
-		                    	(item.val().infor.status === keyStatus || keyStatus === "") &&
-		                    	(item.key === keyId || keyId === "") && 
-		                        (item.val().infor.class === keyClass || keyClass === "") 
-	                        ) 
+                    if (
+                    		(keyId!="" || keyName!="" || keyStatus!="" || keyDate!="" || keyClass!="") &&
+	                    	(item.val().infor.fullName === keyName || keyName === "") &&
+	                    	(item.val().infor.status === keyStatus || keyStatus === "") &&
+	                    	(item.key === keyId || keyId === "") && 
+	                        (item.val().infor.class === keyClass || keyClass === "")   
                         )
                     {
                         html_str =
@@ -394,7 +509,13 @@
             });
         }
 
-        function showHistory(showAll) {
+        // ham tiem kiem lich su
+        function searchHistory() {
+        	document.getElementById('allemployee_table').style.display  = 'none';
+        	document.getElementById('allhistory_table').style.display  = 'none';
+        	document.getElementById('add_table').style.display  = 'none';
+        	document.getElementById('search_table').style.display  = 'block';
+
             var allHistory = {}
             refVDK.once('value', function (item_list) {
 
@@ -404,7 +525,7 @@
                 var keyDate = document.getElementById('findDate').value;
                 var keyType = document.getElementById('findActivities').value;
 
-                var table = document.getElementById('main_table')
+                var table = document.getElementById('search_table')
                 var table_head = table.getElementsByTagName('thead')[0]
                 table_head.innerHTML = 
                 "<tr><th>STT</th><th>ID</th><th>Name</th><th>Department</th><th>Date</th><th>Time</th><th>Type</th></tr>"
@@ -438,13 +559,13 @@
                	html_str =  '<tr> NO RESULT </tr>';
                 for(var i=0; i<sttHistory; i++)
                 { 
-                    if ( (showAll === 1) ||
-                    	 ((keyId!="" || keyName!="" || keyType!="" || keyDate!="" || keyClass!="") &&
+                    if (
+                    	 (keyId!="" || keyName!="" || keyType!="" || keyDate!="" || keyClass!="") &&
                     	 (allHistory[i].id === keyId || keyId === "") &&
                          (allHistory[i].fullName === keyName || keyName === "") &&
                          (allHistory[i].typeAc === keyType || keyType === "") &&
                          (allHistory[i].class === keyClass || keyClass === "") &&
-                         compareMonth(allHistory[i].date,keyDate)===1 ) )
+                         compareMonth(allHistory[i].date,keyDate)===1 )
                     {
                         stt++;
                         html_str =
@@ -464,7 +585,10 @@
                 table_body.innerHTML += html_str;          
             });
         }
+
         
+        
+        // ====================================== HAM XU LI LOGIC ==========================================
         function sortHistory(allHistory, sttHistory){
             for(var i=0; i<sttHistory; i++){
                 for(var j=i+1; j<sttHistory; j++){
@@ -537,6 +661,31 @@
             if (h1===h2  && m1===m2 && s1>s2) return 1;
 
             return 0;
+        }
+        function compareMonth(a, m){
+        	if (m == "") {
+        		return 1;
+        	}
+            if (m.length==10) {
+            	if (a==m) return 1;
+            	else return 0;
+            } else {
+            	if (a.substring(3,10)==m) return 1; 
+            	else return 0;
+            }
+        }
+         function resetAll_searchTable(){
+        	document.getElementById('findId').value = '';
+            document.getElementById('findName').value = '';
+            document.getElementById('findClass').value = '';
+            document.getElementById('findDate').value = '';
+            document.getElementById('findActivities').value = '';
+        }
+
+        function resetAll_addTable(){
+            document.getElementById('addName').value = '';
+            document.getElementById('addClass').value = '';
+            document.getElementById('addId').value = '';
         }
     </script>
 </body>
